@@ -1,0 +1,37 @@
+EVENT ID (field .Ba) DÙNG TRONG mod/keyboard.js  -  bản MDZ 2.3.2 PC
+=====================================================================
+
+Đường dẫn tới event: runtime.Hr.Game_events.Ly['t495'][page].Zk[idx][0]
+
+  page 0 = 101 event  (bản 2.1.4 có 100)
+  page 1 = 10  event  (giống hệt 2.1.4)
+
+Bảng đã đối chiếu 2.1.4 <-> 2.3.2 bằng cách so field .Ba (ID cố định do
+Construct 2 sinh, không đổi khi tác giả thêm/bớt event khác):
+
+  Tên            page   sid (.Ba)            idx 2.1.4   idx 2.3.2
+  -------------  ----   ------------------   ---------   ---------
+  RELOAD           0    8302300112826202         95          96   <-- ĐÃ DỊCH
+  PAD_PAGE         0    607427199268123          31          31
+  TAKE_ITENS       1    8880091309135125          6           6
+  INVENTORY        1    787240265571276           8           8
+  SWITCH_WEAPON    1    6889675909831562          9           9
+
+Lý do RELOAD dịch: bản 2.3.2 chèn thêm 1 event mới (sid 907275219036530)
+vào page 0 idx 82, nên mọi event từ idx 82 trở đi đều dịch +1.
+
+keyboard.js giờ TRA THEO sid trước, chỉ dùng idx khi không thấy sid.
+=> Lên bản mới (2.3.3, 2.4...) mà tác giả chỉ thêm event thì vẫn chạy đúng,
+   không phải dò lại. Nếu console báo "không thấy sid ... dùng tạm idx ..."
+   thì nghĩa là event đó đã bị tác giả xoá/tạo lại -> đọc sid thực tế mà
+   console in ra rồi thay vào bảng trên + vào keyboard.js.
+
+Cách dò lại thủ công (F9 mở DevTools, dán vào console):
+
+  var h = cr_getC2Runtime().Hr.Game_events.Ly['t495'];
+  [0,1].forEach(p => h[p].Zk.forEach((e,i) => e && e[0] &&
+      console.log('page'+p, 'idx'+i, 'sid='+e[0].Ba)));
+
+Các nút bắn / ngắm / guide / đổi loại vũ khí KHÔNG dùng cơ chế này - chúng
+giả lập click chuột lên canvas theo toạ độ tỉ lệ (UI_BUTTONS trong
+keyboard.js), chỉnh bằng F10 hoặc CALIBRATE("tên_nút").

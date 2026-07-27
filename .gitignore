@@ -1,0 +1,50 @@
+# =====================================================================
+#  NW.js runtime - KHÔNG push lên git (nặng ~400 MB, tải lại được)
+#  Cài lại bằng:  powershell -ExecutionPolicy Bypass -File .\get-runtime.ps1
+#  Nguồn: https://dl.nwjs.io/v0.81.0/nwjs-sdk-v0.81.0-win-x64.zip (164 MB)
+#
+#  Các pattern dưới đây phủ đúng những file này:
+#    *.dll  -> nw.dll (196MB), node.dll, libGLESv2.dll, vulkan-1.dll,
+#              vk_swiftshader.dll, d3dcompiler_47.dll, ffmpeg.dll,
+#              libEGL.dll, nw_elf.dll
+#    *.exe  -> MiniDayZ-2.3.2.exe (= nw.exe), nwjc.exe, chromedriver.exe,
+#              notification_helper.exe
+#    *.pak  -> resources.pak, nw_100_percent.pak, nw_200_percent.pak
+#    *.dat  -> icudtl.dat
+#    *.bin  -> v8_context_snapshot.bin
+#    *.nexe -> nacl_irt_x86_64.nexe
+# =====================================================================
+*.dll
+*.exe
+*.pak
+*.dat
+*.bin
+*.nexe
+
+# locales/ 91 MB | pnacl/ 33 MB | swiftshader/ = libEGL + libGLESv2 bản phần mềm
+locales/
+pnacl/
+swiftshader/
+
+# credits.html = trang license Chromium, 8.8 MB
+credits.html
+vk_swiftshader_icd.json
+
+# ===== Cloud save (repo git RIÊNG, không thuộc repo game) =====
+/cloudsave/
+
+# ===== Dependencies / cache (cache/ chứa zip NW.js đã tải) =====
+node_modules/
+cache/
+*.bak
+*.log
+
+# ===== Rác từ APK gốc (không cần để chạy) =====
+/_apk_original/
+
+# ===== OS / editor =====
+Thumbs.db
+Desktop.ini
+.DS_Store
+.vscode/
+.idea/
