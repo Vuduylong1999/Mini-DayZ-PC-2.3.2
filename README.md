@@ -112,3 +112,10 @@ Bật autosave nền: sửa `AUTOSAVE_MINUTES` trong `mod/cloudsave.js` (mặc �
 Để không phải dò lại mỗi lần lên đời, `triggerEvent()` giờ tra theo **sid**
 (field `.Ba`, ID cố định do Construct 2 sinh), chỉ dùng index cũ làm dự phòng.
 Bảng sid + cách dò lại: xem `mod/EVENT-IDS.txt`.
+
+
+Về máy ở nhà thì:
+git clone https://github.com/Vuduylong1999/Mini-DayZ-PC-2.3.2.git
+cd Mini-DayZ-PC-2.3.2
+git clone https://github.com/Vuduylong1999/Mini-DayZ-PC-save.git cloudsave
+powershell -ExecutionPolicy Bypass -File .\get-runtime.ps1
