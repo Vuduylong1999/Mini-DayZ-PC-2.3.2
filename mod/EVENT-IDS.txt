@@ -13,9 +13,23 @@ Construct 2 sinh, không đổi khi tác giả thêm/bớt event khác):
   -------------  ----   ------------------   ---------   ---------
   RELOAD           0    8302300112826202         95          96   <-- ĐÃ DỊCH
   PAD_PAGE         0    607427199268123          31          31
+  SHOOT_FIREWP     1    7708888474205845          0           0
   TAKE_ITENS       1    8880091309135125          6           6
   INVENTORY        1    787240265571276           8           8
   SWITCH_WEAPON    1    6889675909831562          9           9
+
+Bảng đầy đủ page 1 (10 event), kèm object gắn trigger - dò tĩnh từ data.js:
+
+  idx0  7708888474205845  t505  gui_btn_attack     <-- SHOOT_FIREWP
+  idx1   893643204604230  t807  gui_btn_car_leave
+  idx2  5542220247495624  t220  btn_restart
+  idx3  1069084145647025  t568  gui_btn_builder
+  idx4  4757951835955596  t292  sub_menu
+  idx5   939780111830395  t910  gui_info_hint
+  idx6  8880091309135125  t512  gui_btn_interact   <-- TAKE_ITENS
+  idx7   641119446399192  t677  gui_dpad_stick
+  idx8   787240265571276  t497  gui_btn_inventory  <-- INVENTORY
+  idx9  6889675909831562  t509  gui_btn_switch     <-- SWITCH_WEAPON
 
 Lý do RELOAD dịch: bản 2.3.2 chèn thêm 1 event mới (sid 907275219036530)
 vào page 0 idx 82, nên mọi event từ idx 82 trở đi đều dịch +1.
@@ -32,6 +46,33 @@ Cách dò lại thủ công (F9 mở DevTools, dán vào console):
   [0,1].forEach(p => h[p].Zk.forEach((e,i) => e && e[0] &&
       console.log('page'+p, 'idx'+i, 'sid='+e[0].Ba)));
 
-Các nút bắn / ngắm / guide / đổi loại vũ khí KHÔNG dùng cơ chế này - chúng
-giả lập click chuột lên canvas theo toạ độ tỉ lệ (UI_BUTTONS trong
-keyboard.js), chỉnh bằng F10 hoặc CALIBRATE("tên_nút").
+Cách dò TĨNH (không cần chạy game) - chạy trong thư mục game:
+
+  node -e "
+  const d=JSON.parse(require('fs').readFileSync('data.js','utf8').replace(/^﻿/,''));
+  const p=d.project,T=p[3],order=[];
+  (function walk(l){for(const b of l){if(!Array.isArray(b))continue;
+    if(b[0]===0){const c=b[5]||[];if(c.length&&c[0][0]===495)
+      order.push({f:c[0][1],sid:b[4],prm:c[0][9]&&c[0][9][0]&&c[0][9][0][1]});
+      walk(b[7]||[]);} else if(b[0]===2) walk(b[5]||b[4]||[]);}})(p[6][0][1]);
+  const img=i=>{const m=JSON.stringify(T[i]||null).match(/images\/([a-z0-9_-]+)-sheet/i);return m?m[1]:'?'};
+  order.filter(o=>o.f===273).forEach((o,i)=>console.log('page1 idx'+i,o.sid,'t'+o.prm,img(o.prm)));"
+
+  495 = index của object t495 (Touch). Condition func 273 = page 1 (10 event),
+  func 227 = page 0. Lưu ý: page 0 dò tĩnh ra 98 event trong khi runtime có 101
+  (lệch +3 từ khoảng idx 93 trở đi) nên page 0 nên dò bằng console như trên.
+  Page 1 khớp 100% (đã đối chiếu 3 sid TAKE_ITENS/INVENTORY/SWITCH_WEAPON).
+
+Các nút ngắm / guide / đổi loại vũ khí KHÔNG dùng cơ chế này - chúng giả lập
+click chuột lên canvas theo toạ độ tỉ lệ (UI_BUTTONS trong keyboard.js), chỉnh
+bằng F10 (nút bắn) hoặc CALIBRATE("tên_nút").
+
+Nút BẮN có CẢ HAI cơ chế, đổi qua lại bằng F8 (xem ATTACK_MODE trong mod/keys.js):
+  canvas -> ăn mọi vũ khí kể cả súng mới nhặt, nhưng không bắn khi đang thay đạn
+  event  -> bắn được cả khi đang thay đạn, nhưng súng mới nhặt có thể không ăn
+Mỗi lần bấm chỉ chạy 1 đường nên luôn đúng 1 viên.
+
+Lý do "event" hụt súng mới nhặt: ev.VG() = run_pretrigger, nó BỎ QUA condition 0
+(chính cái trigger đã khớp) và cũng không chạy condition của các event cha. Event
+SHOOT_FIREWP nằm ở depth 2 nên phần picking/khởi tạo mà click thật đi qua bị
+thiếu -> vũ khí chưa được "chọn" đúng thì không bắn.

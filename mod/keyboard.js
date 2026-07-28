@@ -55,18 +55,15 @@ function triggerEvent(name, page, sid, idx) {
 	}
 }
 
-/* ---------- Bắn/ngắm/guide: giả lập click THẬT vào nút tương ứng trên UI ----------
-   Lý do: mấy nút này khi gọi thẳng event nội bộ (triggerEvent page/idx) không ổn định
-   (vd nút bắn: mỗi loại vũ khí dùng 1 event khác nhau -> gọi sai idx thì im re dù
-   bấm tay vào nút vẫn chạy bình thường). Nên thay vì đoán page/idx, ta giả lập đúng
-   thao tác bấm tay: mousedown + mouseup (giữ ngắn ~10ms) tại đúng toạ độ nút đó trên
-   canvas - đi qua pipeline xử lý gốc của game nên luôn đúng, không phụ thuộc
-   page/idx/loại vũ khí nữa.
+/* ---------- Giả lập click THẬT vào nút tương ứng trên UI ----------
+   Dùng cho ngắm / guide / đổi loại vũ khí, và cho nút BẮN khi ATTACK_MODE = "canvas".
+   Cách làm: mousedown + mouseup (giữ ngắn ~10ms) tại đúng toạ độ nút đó trên canvas
+   -> đi qua pipeline xử lý gốc của game nên luôn đúng, không phụ thuộc loại vũ khí.
 
    UI_BUTTONS lưu toạ độ tỉ lệ 0..1 theo canvas (không phụ thuộc kích thước cửa sổ khi
    giữ nguyên tỉ lệ khung hình) cho từng nút, theo tên.
    Nếu đổi tỉ lệ khung hình (kéo méo cửa sổ, bật/tắt fullscreen...) mà thấy 1 nút nào
-   đó bắn lệch/không trúng, gõ CALIBRATE("tên_nút") trong console rồi CLICK CHUỘT
+   đó bấm lệch/không trúng, gõ CALIBRATE("tên_nút") trong console rồi CLICK CHUỘT
    TRÁI đúng vào nút đó trên màn hình 1 lần để hiệu chỉnh lại - lưu vào localStorage,
    không cần sửa code, giữ nguyên cho các lần chơi sau. F10 = hiệu chỉnh nhanh nút bắn. */
 var UI_BUTTONS = {
@@ -127,11 +124,84 @@ window.CALIBRATE = CALIBRATE;
 
 /* sid lấy từ chính bản 2.3.2 (đã đối chiếu với 2.1.4 - xem mod/EVENT-IDS.txt).
    Bản 2.3.2 chèn thêm 1 event ở page 0 idx 82 nên RELOAD dịch 95 -> 96;
-   các event còn lại giữ nguyên vị trí. */
+   các event còn lại giữ nguyên vị trí.
+   SHOOT_FIREWP = page 1 idx 0, trigger gắn trên object t505 (gui_btn_attack) nên
+   game tự phân nhánh theo loại vũ khí -> 1 event đủ cho mọi loại. */
 function RELOAD_INTER()    { triggerEvent("RELOAD",        0, 8302300112826202, 96); }
 function PAD_INTER()       { triggerEvent("PAD_PAGE",      0, 607427199268123,  31); }
 function TAKE_I_INTER()    { triggerEvent("TAKE_ITENS",    1, 8880091309135125, 6);  }
-function ATTACK_INTER()       { clickUIButton("attack", 10); }
+/* ---------- BẮN: 2 cơ chế, đổi qua lại bằng F8 ----------
+   "canvas" = giả lập click nút bắn  -> ăn mọi vũ khí (kể cả súng mới nhặt),
+                                        nhưng không bắn được khi đang thay đạn.
+   "event"  = gọi thẳng SHOOT_FIREWP -> bắn được cả khi đang thay đạn,
+                                        nhưng súng mới nhặt có thể không ăn.
+   Mỗi lần bấm CHỈ chạy 1 đường -> luôn đúng 1 viên, không bao giờ bắn đôi.
+   Chế độ đang dùng lưu ở localStorage, ưu tiên hơn ATTACK_MODE trong mod/keys.js. */
+var ATTACK_MODES = ["canvas", "event"];
+var attackMode = (typeof ATTACK_MODE === "string" && ATTACK_MODES.indexOf(ATTACK_MODE) >= 0)
+	? ATTACK_MODE : "canvas";
+try {
+	var savedMode = localStorage.getItem("mdz_attack_mode");
+	if (savedMode && ATTACK_MODES.indexOf(savedMode) >= 0) attackMode = savedMode;
+} catch (err) { /* ignore, dùng mặc định từ keys.js */ }
+
+function ATTACK_INTER() {
+	if (attackMode === "event") {
+		triggerEvent("SHOOT_FIREWP", 1, 7708888474205845, 0);
+	} else {
+		clickUIButton("attack", 10);
+	}
+}
+
+function SET_ATTACK_MODE(mode) {
+	if (ATTACK_MODES.indexOf(mode) < 0) {
+		console.warn("[keys] chế độ bắn không hợp lệ: '" + mode + "' (chỉ nhận \"canvas\" hoặc \"event\")");
+		return attackMode;
+	}
+	attackMode = mode;
+	try { localStorage.setItem("mdz_attack_mode", mode); } catch (err) { /* ignore */ }
+	showAttackModeToast();
+	return attackMode;
+}
+
+function TOGGLE_ATTACK_MODE() {
+	return SET_ATTACK_MODE(attackMode === "event" ? "canvas" : "event");
+}
+
+function RESET_ATTACK_MODE() {
+	try { localStorage.removeItem("mdz_attack_mode"); } catch (err) { /* ignore */ }
+	attackMode = (typeof ATTACK_MODE === "string" && ATTACK_MODES.indexOf(ATTACK_MODE) >= 0)
+		? ATTACK_MODE : "canvas";
+	showAttackModeToast();
+	return attackMode;
+}
+
+window.SET_ATTACK_MODE = SET_ATTACK_MODE;
+window.TOGGLE_ATTACK_MODE = TOGGLE_ATTACK_MODE;
+window.RESET_ATTACK_MODE = RESET_ATTACK_MODE;
+
+// Hiện chữ ngắn giữa màn hình để biết đang ở chế độ nào mà không cần mở console.
+var __modeToast = null, __modeToastTimer = 0;
+function showAttackModeToast() {
+	var text = (attackMode === "event")
+		? "BẮN: event (bắn được khi đang thay đạn)"
+		: "BẮN: canvas (ăn mọi vũ khí)";
+	console.log("[keys] " + text);
+	try {
+		if (!__modeToast) {
+			__modeToast = document.createElement("div");
+			__modeToast.style.cssText = "position:fixed;left:50%;top:12%;transform:translateX(-50%);" +
+				"z-index:99999;padding:8px 16px;background:rgba(0,0,0,.75);color:#fff;" +
+				"font:14px/1.4 sans-serif;border-radius:4px;pointer-events:none;white-space:nowrap";
+			document.body.appendChild(__modeToast);
+		}
+		__modeToast.textContent = text;
+		__modeToast.style.display = "block";
+		clearTimeout(__modeToastTimer);
+		__modeToastTimer = setTimeout(function () { __modeToast.style.display = "none"; }, 1600);
+	} catch (err) { /* không hiện được thì thôi, đã log ra console */ }
+}
+
 function AIM_INTER()          { clickUIButton("aim", 10); }
 function GUIDE_INTER()        { clickUIButton("guide", 10); }
 function SWITCH_WP_TYPE_INTER(){ clickUIButton("switchWpType", 10); }
@@ -179,6 +249,7 @@ document.addEventListener("keyup", function (e) {
 		case GAME_KEYS.SWITCH_WEAPON.toLowerCase(): SWICTH_WP_INTER(); break;
 		case GAME_KEYS.AIM.toLowerCase():           AIM_INTER();       break;
 		case GAME_KEYS.GUIDE.toLowerCase():         GUIDE_INTER();     break;
+		case GAME_KEYS.ATTACK_MODE.toLowerCase():   TOGGLE_ATTACK_MODE(); break;
 		default:
 			// Nhặt đồ: E hoặc F
 			if (code === GAME_KEYS.TAKE_ITENS.toLowerCase() ||
@@ -231,6 +302,7 @@ document.addEventListener("mousedown", function (e) {
 		console.log("[keys] Đã hiệu chỉnh lại nút '" + name + "': x=" + UI_BUTTONS[name].x.toFixed(4) + " y=" + UI_BUTTONS[name].y.toFixed(4));
 		return;
 	}
+	if (menuOpen) return; // đang mở menu thì không bắn
 	if (e.button === 0 && MOUSE_KEYS.LEFT_SHOOT) {
 		ATTACK_INTER(); // chuột trái = bắn (mặc định tắt)
 	} else if (e.button === 2 && MOUSE_KEYS.RIGHT_SHOOT) {
@@ -279,7 +351,8 @@ document.addEventListener("keyup", function (e) {
 	}
 });
 
-console.log("[keys] Đã nạp. Chuột phải=bắn (tự nhắm địch gần nhất) |",
+console.log("[keys] Đã nạp. Chuột phải=bắn (tự nhắm địch gần nhất) | chế độ bắn hiện tại:", attackMode, "|",
 	"R=reload, E/F=nhặt đồ, Tab=túi đồ, Q=đổi vũ khí, C=đổi loại vũ khí, Space=ngắm bắn, Z=guide,",
 	"Esc=menu(bật/tắt), +/-=zoom, F11=toàn màn hình,",
-	"F10=hiệu chỉnh lại vị trí nút bắn, CALIBRATE(\"tên_nút\")=hiệu chỉnh nút khác (dùng khi đổi tỉ lệ khung hình mà bắn/ngắm lệch)");
+	"F8=đổi cơ chế bắn canvas<->event, F10=hiệu chỉnh lại vị trí nút bắn,",
+	"CALIBRATE(\"tên_nút\")=hiệu chỉnh nút khác (dùng khi đổi tỉ lệ khung hình mà bắn/ngắm lệch)");

@@ -73,11 +73,33 @@ của Chromium (dùng khi máy không có GPU/driver hỏng) — của NW.js, kh
 | Zoom | `=` / `-` |
 | Toàn màn hình | F11 |
 | DevTools | F9 |
+| Đổi cơ chế bắn | F8 |
 | Hiệu chỉnh lại nút bắn | F10 |
 
-Đổi phím trong `mod/keys.js`. Nếu bắn/ngắm bị lệch sau khi đổi tỉ lệ khung hình:
-bấm F10 (nút bắn) hoặc gõ `CALIBRATE("aim")` / `CALIBRATE("guide")` /
-`CALIBRATE("switchWpType")` trong console rồi click chuột trái đúng vào nút đó.
+Đổi phím trong `mod/keys.js`.
+
+### Hai cơ chế bắn (F8 để đổi qua lại)
+
+| | `canvas` | `event` |
+|---|---|---|
+| Cách làm | giả lập click nút bắn trên UI | gọi thẳng event `SHOOT_FIREWP` |
+| Súng vừa mới nhặt lên | ăn | có thể không ăn |
+| Bắn trong lúc thay đạn | không | **được** |
+
+Mỗi lần bấm chuột chỉ chạy **một** trong hai đường → luôn đúng 1 viên, không bắn đôi.
+Bấm F8 trong game để đổi (hiện chữ giữa màn hình xác nhận), lựa chọn được lưu cho lần
+chơi sau. Mặc định ban đầu đặt ở `ATTACK_MODE` trong `mod/keys.js`; gõ
+`RESET_ATTACK_MODE()` trong console để quay về mặc định đó.
+
+### Cơ chế gọi hành động
+
+Reload / nhặt đồ / túi đồ / đổi vũ khí (và bắn ở chế độ `event`) gọi **thẳng event**
+trong event sheet, tra theo sid cố định — xem `mod/EVENT-IDS.txt`.
+
+Ngắm / guide / đổi loại vũ khí (và bắn ở chế độ `canvas`) **giả lập click** lên canvas
+theo toạ độ tỉ lệ. Nếu chúng bị lệch sau khi đổi tỉ lệ khung hình: bấm F10 (nút bắn)
+hoặc gõ `CALIBRATE("aim")` / `CALIBRATE("guide")` / `CALIBRATE("switchWpType")` trong
+console rồi click chuột trái đúng vào nút đó.
 
 ## Cloud save (git)
 

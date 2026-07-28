@@ -27,6 +27,7 @@ var KEYS = {
 	KEY_X : "KeyX",		KEY_PERIOD			: "Period",
 	KEY_Y : "KeyY",		KEY_METALEFT		: "MetaLeft",
 	KEY_Z : "KeyZ",		KEY_METARIGHT		: "MetaRight",
+						KEY_F8				: "F8",
 						KEY_F11				: "F11",
 }
 
@@ -43,7 +44,8 @@ var GAME_KEYS = {
 	ZOOM_OUT		: KEYS.KEY_MINUS,
 	FULLSCREEN		: KEYS.KEY_F11,		// F11 = bật/tắt toàn màn hình
 	AIM				: KEYS.KEY_SPACE,	// ngắm bắn (toggle bật/tắt)
-	GUIDE			: KEYS.KEY_Z		// guide (toggle bật/tắt)
+	GUIDE			: KEYS.KEY_Z,		// guide (toggle bật/tắt)
+	ATTACK_MODE		: KEYS.KEY_F8		// đổi cách gửi lệnh bắn (canvas <-> event)
 	// (bắn chỉ bằng CHUỘT PHẢI, xem MOUSE_KEYS bên dưới)
 }
 
@@ -52,3 +54,15 @@ var MOUSE_KEYS = {
 	LEFT_SHOOT		: false,	// chuột trái: tắt
 	RIGHT_SHOOT		: true		// chuột phải = bắn
 }
+
+/* Cách gửi lệnh BẮN. Mỗi lần bấm chỉ chạy 1 trong 2 đường -> luôn đúng 1 viên.
+     "canvas" = giả lập click vào nút bắn trên UI.
+                + Chạy với MỌI vũ khí, kể cả súng vừa mới nhặt lên.
+                - KHÔNG bắn được trong lúc đang thay đạn.
+     "event"  = gọi thẳng event SHOOT_FIREWP trong event sheet.
+                + Bắn được KỂ CẢ khi đang thay đạn.
+                - Súng vừa mới nhặt lên có thể không ăn.
+   Đây là giá trị MẶC ĐỊNH khi mới cài. Trong game bấm F8 để đổi qua lại - lựa chọn
+   đó được lưu và sẽ ưu tiên hơn dòng dưới ở các lần chơi sau.
+   Muốn quay về mặc định: gõ RESET_ATTACK_MODE() trong console (F9). */
+var ATTACK_MODE = "canvas";
